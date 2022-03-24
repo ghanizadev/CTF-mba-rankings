@@ -2,8 +2,8 @@ const fs = require('fs');
 
 class Database {
     static instance;
-    static data = [];
-    static t;
+    data = [];
+    t;
 
     constructor() {
         const file = fs.readFileSync('db');
@@ -15,27 +15,28 @@ class Database {
         return this.instance;
     }
 
-    static insert(user) {
+    insert(user) {
         this.data.push(user);
         this.flush();
     }
 
-    static get(userId) {
-        return this.data.find(({id}) => id === userId)
+    getByUsername(username) {
+        return this.data.find((user) => user.username === username)
     }
 
-    static update(userId, userData) {
+    update(userId, userData) {
         const index = this.data.find(({id}) => id === userId);
 
         if(index < 0) return;
 
         const user = {...this.data[index], ...userData}
-        this.data.splice(index, 1, user)
+        this.data.splice(index, 1, user);
+        this.flush();
 
         return user;
     }
 
-    static flush() {
+    flush() {
         if(this.t) clearTimeout(t);
 
         this.t = setTimeout(() => {

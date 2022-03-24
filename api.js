@@ -1,6 +1,7 @@
 const querystring = require('querystring');
 const crypto = require('crypto');
 const Database = require('./database');
+const auth = require('./auth')
 
 function helloWorld(request, response) {
     response.writeHead(200, 'OK', ['Content-Type', 'application/json']);
@@ -18,7 +19,9 @@ function authorize(request, response) {
         const body = data.toString('utf-8');
         const { username, password } = querystring.parse(body);
 
-        if(username === 'admin' && password === 'admin') {
+        const user = Database.getInstance().getByUsername(username);
+
+        if(user && auth.compare(password, user.password)) {
             response.writeHead(307, 'Temporary Redirect', ['Location', '/dashboard']);
             response.end();
             return;
@@ -40,16 +43,24 @@ function register(request, response) {
         const body = data.toString('utf-8');
         const id = crypto.randomBytes(12).toString('hex')
         const { username, password } = querystring.parse(body);
+
+        const exists = Database.getInstance().getByUsername(username);
+
+        if(exists) {
+            response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
+            response.end(JSON.stringify({ message: 'USERNAME IN USE' }));
+            return;
+        }
+
         const flag = crypto.randomBytes(16).toString('base64url');
 
         const user = {
             id,
             username,
-            password,
             flag
         }
 
-        Database.insert(user);
+        Database.getInstance().insert({ ...user, password: auth.hash(password) });
 
         response.writeHead(201, 'Created', ['Content-Type', 'application/json']);
         response.end(JSON.stringify(user));
