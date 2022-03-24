@@ -13,5 +13,9 @@ module.exports = {
             acc[decodeURIComponent(v[0].trim())] = decodeURIComponent(v[1].trim());
             return acc;
             }, {});
+    },
+    isValidPassword: function (password = '') {
+        const regex = new RegExp('^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$');
+        return regex.test(password)
     }
 }

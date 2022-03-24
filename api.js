@@ -2,7 +2,7 @@ const querystring = require('querystring');
 const crypto = require('crypto');
 const Database = require('./database');
 const auth = require('./auth');
-const { parseHeaderArray, parseCookies } = require('./helper');
+const { parseHeaderArray, parseCookies, isValidPassword} = require('./helper');
 const { hash } = require('./auth');
 
 function helloWorld(request, response) {
@@ -46,14 +46,18 @@ function register(request, response) {
     request.on('data', (data) => {
         if(!data) {
             response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
-            response.end(JSON.stringify({ message: 'BAD REQUEST' }));
+            response.end(JSON.stringify({message: 'BAD REQUEST'}));
             return;
         }
 
         const body = data.toString('utf-8');
         const id = crypto.randomBytes(12).toString('hex')
         const { username, password } = querystring.parse(body);
-
+        if (!isValidPassword(password)) {
+            response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
+            response.end(JSON.stringify({ message: 'Password is not valid' }));
+            return;
+        }
         const exists = Database.getInstance().getByUsername(username);
 
         if(exists) {
@@ -133,6 +137,12 @@ function updatePassword(request, response) {
 
         const body = data.toString('utf-8');
         const { oldPassword, newPassword } = querystring.parse(body);
+
+        if (!isValidPassword(newPassword)) {
+            response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
+            response.end(JSON.stringify({ message: 'Password is not valid' }));
+            return;
+        }
 
         if(!auth.compare(oldPassword, user.password)) {
             response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
