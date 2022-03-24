@@ -73,4 +73,4 @@ function handler(request, response) {
 }
 
 const server = http.createServer(handler);
-server.listen(process.env.PORT || process.argv[2] || 8080);
+server.listen(process.env.PORT || process.argv[2] || 8000);
