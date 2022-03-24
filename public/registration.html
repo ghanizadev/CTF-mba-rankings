@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./index.js"></script>
+    <title>Document</title>
+</head>
+<body>
+<h1>Register</h1>
+<form action="/api/register" method="POST">
+    <label for="username-input">
+        Username
+        <input required type="text" id="username-input" name="username" placeholder="Username" />
+    </label>
+    <br />
+    <label for="username-input">
+        Password
+        <input required type="password" id="password-input" name="password" placeholder="Password" />
+    </label>
+    <br />
+    <input type="submit" value="Register" />
+</form>
+</body>
+</html>
