@@ -3,7 +3,6 @@ const crypto = require('crypto');
 const Database = require('./database');
 const auth = require('./auth');
 const { parseHeaderArray, parseCookies } = require('./helper');
-const { hash } = require('./auth');
 
 function helloWorld(request, response) {
     response.writeHead(200, 'OK', ['Content-Type', 'application/json']);
@@ -188,6 +187,6 @@ module.exports = function (request) {
         }
     } catch(e) {
         response.writeHead(500, 'Internal Error');
-        response.end('Internal Error');
+        response.end(JSON.stringify(updated));
     }
 }
