@@ -24,6 +24,10 @@ class Database {
         return this.data.find((user) => user.username === username)
     }
 
+    getById(userId) {
+        return this.data.find((user) => user.id === userId)
+    }
+
     update(userId, userData) {
         const index = this.data.find(({id}) => id === userId);
 

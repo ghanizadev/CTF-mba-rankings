@@ -1,7 +1,8 @@
 const querystring = require('querystring');
 const crypto = require('crypto');
 const Database = require('./database');
-const auth = require('./auth')
+const auth = require('./auth');
+const { parseHeaderArray, parseCookies } = require('./helper');
 
 function helloWorld(request, response) {
     response.writeHead(200, 'OK', ['Content-Type', 'application/json']);
@@ -22,7 +23,8 @@ function authorize(request, response) {
         const user = Database.getInstance().getByUsername(username);
 
         if(user && auth.compare(password, user.password)) {
-            response.writeHead(307, 'Temporary Redirect', ['Location', '/dashboard']);
+            const cookie = `SID=${encodeURIComponent(auth.session(user))}; Max-Age=86400; Path=/;`;
+            response.writeHead(307, 'Temporary Redirect', ['Location', '/dashboard', 'Set-Cookie', cookie]);
             response.end();
             return;
         }
@@ -30,6 +32,13 @@ function authorize(request, response) {
         response.writeHead(401, 'Unauthorized', ['Content-Type', 'application/json']);
         response.end(JSON.stringify({ message: 'UNAUTHORIZED' }));
     })
+}
+
+function logout(request, response) {
+    const cookie = `SID=${encodeURIComponent('popcorn')}; Max-Age=0; Path=/;`;
+    response.writeHead(307, 'Temporary Redirect', ['Location', '/', 'Set-Cookie', cookie]);
+    response.end();
+    return;
 }
 
 function register(request, response) {
@@ -69,8 +78,37 @@ function register(request, response) {
 }
 
 function getFlag(request, response) {
+    const {cookie} = parseHeaderArray(request.rawHeaders);
+    if(!cookie) {
+        response.writeHead(401, 'Unauthorized');
+        response.end('C01');
+        return;
+    }
+
+    const {SID} = parseCookies(cookie);
+    if(!SID) {
+        response.writeHead(401, 'Unauthorized');
+        response.end('C02');
+        return;
+    }
+
+    const userId = auth.validateSession(SID);
+    if(!userId) {
+        response.writeHead(401, 'Unauthorized');
+        response.end('C03');
+        return;
+    }
+
+    const user = Database.getInstance().getById(userId);
+
+    if(!user) {
+        response.writeHead(401, 'Unauthorized');
+        response.end('C04');
+        return;
+    }
+
     response.writeHead(200, 'OK', ['Content-Type', 'application/json']);
-    response.end(JSON.stringify({ flag: 'v=dQw4w9WgXcQ' }));
+    response.end(JSON.stringify({ flag: user.flag }));
 }
 
 module.exports = function (request) {
@@ -87,6 +125,10 @@ module.exports = function (request) {
 
         case url === '/api/register' && method === 'POST':
             register(...arguments);
+            break;
+
+        case url === '/api/logout' && method === 'GET':
+            logout(...arguments);
             break;
 
         default:
