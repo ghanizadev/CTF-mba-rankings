@@ -29,15 +29,15 @@ class Database {
     }
 
     update(userId, userData) {
-        const index = this.data.find(({id}) => id === userId);
+        const index = this.data.findIndex(({id}) => id === userId);
 
         if(index < 0) return;
 
-        const user = {...this.data[index], ...userData}
+        const user = {...this.data[index], ...userData};
         this.data.splice(index, 1, user);
         this.flush();
 
-        return user;
+        return {...user};
     }
 
     flush() {

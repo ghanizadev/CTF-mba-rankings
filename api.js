@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const Database = require('./database');
 const auth = require('./auth');
 const { parseHeaderArray, parseCookies } = require('./helper');
+const { hash } = require('./auth');
 
 function helloWorld(request, response) {
     response.writeHead(200, 'OK', ['Content-Type', 'application/json']);
@@ -77,7 +78,7 @@ function register(request, response) {
     })
 }
 
-function getFlag(request, response) {
+function get(request, response) {
     const {cookie} = parseHeaderArray(request.rawHeaders);
     if(!cookie) {
         response.writeHead(401, 'Unauthorized');
@@ -94,7 +95,8 @@ function getFlag(request, response) {
 
     const userId = auth.validateSession(SID);
     if(!userId) {
-        response.writeHead(401, 'Unauthorized');
+        const cookie = `SID=${encodeURIComponent('popcorn')}; Max-Age=0; Path=/;`;
+        response.writeHead(401, 'Unauthorized', ['Set-Cookie', cookie]);
         response.end('C03');
         return;
     }
@@ -102,37 +104,90 @@ function getFlag(request, response) {
     const user = Database.getInstance().getById(userId);
 
     if(!user) {
-        response.writeHead(401, 'Unauthorized');
+        const cookie = `SID=${encodeURIComponent('popcorn')}; Max-Age=0; Path=/;`;
+        response.writeHead(401, 'Unauthorized', ['Set-Cookie', cookie]);
         response.end('C04');
         return;
     }
+
+    return user;
+}
+
+function getFlag(request, response) {
+    const user = get(request, response);
 
     response.writeHead(200, 'OK', ['Content-Type', 'application/json']);
     response.end(JSON.stringify({ flag: user.flag }));
 }
 
+function updatePassword(request, response) {
+    request.on('data', (data) => {
+        if(!data) {
+            response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
+            response.end(JSON.stringify({ message: 'BAD REQUEST' }));
+            return;
+        }
+
+        const user = get(request, response);
+        if(!user) return;
+
+        const body = data.toString('utf-8');
+        const { oldPassword, newPassword } = querystring.parse(body);
+
+        if(!auth.compare(oldPassword, user.password)) {
+            response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
+            response.end(JSON.stringify({ message: 'PASSWORD DOES NOT MATCH' }));
+            return;
+        }
+
+        if(!newPassword) {
+            response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
+            response.end(JSON.stringify({ message: 'INVALID PASSWORD' }));
+            return;
+        }
+
+        const updated = Database.getInstance().update(user.id, {
+            password: auth.hash(newPassword)
+        });
+
+        delete updated.password;
+
+        response.writeHead(201, 'Created', ['Content-Type', 'application/json']);
+        response.end(JSON.stringify(updated));
+    })
+}
+
 module.exports = function (request) {
-    const { url, method } = request;
+    try {
+        const { url, method } = request;
 
-    switch(true){
-        case url === '/api/login' && method === 'POST':
-            authorize(...arguments);
-            break;
-
-        case url === '/api/flag' && method === 'GET':
-            getFlag(...arguments);
-            break;
-
-        case url === '/api/register' && method === 'POST':
-            register(...arguments);
-            break;
-
-        case url === '/api/logout' && method === 'GET':
-            logout(...arguments);
-            break;
-
-        default:
-            helloWorld(...arguments);
-            break;
+        switch(true){
+            case url === '/api/login' && method === 'POST':
+                authorize(...arguments);
+                break;
+    
+            case url === '/api/flag' && method === 'GET':
+                getFlag(...arguments);
+                break;
+    
+            case url === '/api/register' && method === 'POST':
+                register(...arguments);
+                break;
+    
+            case url === '/api/logout' && method === 'GET':
+                logout(...arguments);
+                break;
+    
+            case url === '/api/update-password' && method === 'POST':
+                updatePassword(...arguments);
+                break;
+    
+            default:
+                helloWorld(...arguments);
+                break;
+        }
+    } catch(e) {
+        response.writeHead(500, 'Internal Error');
+        response.end('Internal Error');
     }
 }
