@@ -13,5 +13,8 @@ module.exports = {
             acc[decodeURIComponent(v[0].trim())] = decodeURIComponent(v[1].trim());
             return acc;
             }, {});
+    },
+    validatePasswordFormat: function(password) {
+        return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
     }
 }

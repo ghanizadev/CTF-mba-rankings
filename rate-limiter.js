@@ -19,8 +19,6 @@ class RateLimiter {
 
         const [_, times, timestamp, timeout] = this.clients[index];
 
-        console.log({times})
-
         if(timeout) clearTimeout(timeout);
 
         const t = setTimeout(() => {

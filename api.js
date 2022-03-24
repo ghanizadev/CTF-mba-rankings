@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const Database = require('./database');
 const auth = require('./auth');
 const RateLimiter = require('./rate-limiter');
-const { parseHeaderArray, parseCookies } = require('./helper');
+const { parseHeaderArray, parseCookies, validatePasswordFormat } = require('./helper');
 
 function helloWorld(request, response) {
     response.writeHead(200, 'OK', ['Content-Type', 'application/json']);
@@ -39,7 +39,6 @@ function logout(request, response) {
     const cookie = `SID=${encodeURIComponent('popcorn')}; Max-Age=0; Path=/;`;
     response.writeHead(307, 'Temporary Redirect', ['Location', '/', 'Set-Cookie', cookie]);
     response.end();
-    return;
 }
 
 function register(request, response) {
@@ -54,6 +53,18 @@ function register(request, response) {
         const id = crypto.randomBytes(12).toString('hex')
         const { username, password } = querystring.parse(body);
 
+        if(username.length < 4 && username.length > 12) {
+            response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
+            response.end(JSON.stringify({ message: 'INVALID USERNAME' }));
+            return;
+        }
+
+        if(!validatePasswordFormat(password)) {
+            response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
+            response.end(JSON.stringify({ message: 'INVALID PASSWORD FORMAT' }));
+            return;
+        }
+
         const exists = Database.getInstance().getByUsername(username);
 
         if(exists) {
@@ -67,18 +78,20 @@ function register(request, response) {
         const user = {
             id,
             username,
+            password: auth.hash(password),
             flag
         }
 
-        Database.getInstance().insert({ ...user, password: auth.hash(password) });
+        Database.getInstance().insert(user);
 
-        response.writeHead(201, 'Created', ['Content-Type', 'application/json']);
-        response.end(JSON.stringify(user));
+        const cookie = `SID=${encodeURIComponent(auth.session(user))}; Max-Age=86400; Path=/;`;
+        response.writeHead(307, 'Temporary Redirect', ['Location', '/dashboard', 'Set-Cookie', cookie]);
+        response.end();
         return;
     })
 }
 
-function get(request, response) {
+function getRequestInfo(request, response) {
     const {cookie} = parseHeaderArray(request.rawHeaders);
     if(!cookie) {
         response.writeHead(401, 'Unauthorized');
@@ -113,13 +126,6 @@ function get(request, response) {
     return {...user};
 }
 
-function getFlag(request, response) {
-    const user = get(request, response);
-
-    response.writeHead(200, 'OK', ['Content-Type', 'application/json']);
-    response.end(JSON.stringify({ flag: user.flag }));
-}
-
 function updatePassword(request, response) {
     request.on('data', (data) => {
         if(!data) {
@@ -128,11 +134,23 @@ function updatePassword(request, response) {
             return;
         }
 
-        const user = get(request, response);
+        const user = getRequestInfo(request, response);
         if(!user) return;
 
         const body = data.toString('utf-8');
-        const { oldPassword, newPassword } = querystring.parse(body);
+        const { oldPassword, newPassword, confirmPassword } = querystring.parse(body);
+
+        if(!validatePasswordFormat(newPassword)) {
+            response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
+            response.end(JSON.stringify({ message: 'INVALID PASSWORD FORMAT' }));
+            return;
+        }
+
+        if(confirmPassword !== newPassword) {
+            response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
+            response.end(JSON.stringify({ message: 'NEW PASSWORD DOES NOT MATCH' }));
+            return;
+        }
 
         if(!auth.compare(oldPassword, user.password)) {
             response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
@@ -146,20 +164,20 @@ function updatePassword(request, response) {
             return;
         }
 
-        const updated = Database.getInstance().update(user.id, {
+        Database.getInstance().update(user.id, {
             password: auth.hash(newPassword)
         });
 
-        delete updated.password;
-
-        response.writeHead(201, 'Created', ['Content-Type', 'application/json']);
-        response.end(JSON.stringify(updated));
+        logout(request, response);
     })
 }
 
 function profile(request, response) {
-    const user = get(request, response);
-    if(!user) return;
+    const user = getRequestInfo(request, response);
+    if(!user) {
+        logout(request, response);
+        return;
+    }
 
     delete user.password;
 
@@ -181,10 +199,6 @@ module.exports = function (request, response) {
         switch(true){
             case url === '/api/login' && method === 'POST':
                 authorize(...arguments);
-                break;
-    
-            case url === '/api/flag' && method === 'GET':
-                getFlag(...arguments);
                 break;
     
             case url === '/api/register' && method === 'POST':

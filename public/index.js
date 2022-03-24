@@ -1,24 +1,11 @@
-function getFlag() {
-    fetch('/api/flag', {
-        method: 'GET',
-    })
-    .then(res => res.json())
-    .then(data => {
-        document.querySelector('h1#flag').innerText += data.flag;
-    })
-}
-
 function getUserProfile() {
-    fetch('/api/profile', {
+    return fetch('/api/profile', {
         method: 'GET',
     })
     .then(res => res.json())
-    .then(data => {
-        document.querySelector('h1#username').innerText += data.username;
-    })
 }
 
-function init() {
-    getUserProfile();
-    getFlag();
+async function init() {
+    const { username, flag } = await getUserProfile();
+    document.querySelector('h1#message').innerText = `Hello ${username}, your flag is ${flag}`;
 }
