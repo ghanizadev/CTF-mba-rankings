@@ -2,6 +2,7 @@ const querystring = require('querystring');
 const crypto = require('crypto');
 const Database = require('./database');
 const auth = require('./auth');
+const RateLimiter = require('./rate-limiter');
 const { parseHeaderArray, parseCookies } = require('./helper');
 
 function helloWorld(request, response) {
@@ -109,7 +110,7 @@ function get(request, response) {
         return;
     }
 
-    return user;
+    return {...user};
 }
 
 function getFlag(request, response) {
@@ -156,9 +157,26 @@ function updatePassword(request, response) {
     })
 }
 
-module.exports = function (request) {
+function profile(request, response) {
+    const user = get(request, response);
+    if(!user) return;
+
+    delete user.password;
+
+    response.writeHead(200, 'OK', ['Content-Type', 'application/json']);
+    response.end(JSON.stringify(user));    
+}
+
+module.exports = function (request, response) {
     try {
         const { url, method } = request;
+        const headers = parseHeaderArray(request.rawHeaders);
+
+        if(!RateLimiter.getInstance().check(headers['x-forwarded-for'] || request.socket.remoteAddress)) {
+            response.writeHead(429, 'Too Many Requests');
+            response.end();
+            return;
+        }
 
         switch(true){
             case url === '/api/login' && method === 'POST':
@@ -180,13 +198,24 @@ module.exports = function (request) {
             case url === '/api/update-password' && method === 'POST':
                 updatePassword(...arguments);
                 break;
+
+            case url === '/api/profile' && method === 'GET':
+                profile(...arguments);
+                break;
+
+            case url === '/api/test' && method === 'GET':
+                response.writeHead(200, 'OK');
+                response.end();
+                break;
     
             default:
                 helloWorld(...arguments);
                 break;
         }
     } catch(e) {
+        console.log(e);
         response.writeHead(500, 'Internal Error');
-        response.end(JSON.stringify(updated));
+        response.end();
+        return;
     }
 }

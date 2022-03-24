@@ -4,5 +4,11 @@
     "username": "admin",
     "flag": "sMs7lv9Rgq-rRCeX9RQg0w",
     "password": "LPrvGTPqhOycXQltjsCf0g.mWBGDl9TsI1sS3OUEdnc_RC5eNF3dVgaNydzwbZj65Zv9FG0OhQhKj5oC-G2d3sANrZi9_-G2GpD3mjnmLGwTA"
+  },
+  {
+    "id": "a363194df6dd8da4023eeccb",
+    "username": "<script>console.log('hacked')</script>",
+    "flag": "XrEF2vRWLbM4_8qORylR4g",
+    "password": "tb5CmGvRRJd7nxafrHYPKA.-t5Djo_uqQQA-BqjvhUclmz7iFxem138NJVm1Ytq1b9cN39pQe2pwdGzQxHKklhU-I6mWjnv65K1ZAV66a4IGw"
   }
 ]
