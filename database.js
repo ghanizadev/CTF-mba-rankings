@@ -41,7 +41,7 @@ class Database {
     }
 
     flush() {
-        if(this.t) clearTimeout(t);
+        if(this.t) clearTimeout(this.t);
 
         this.t = setTimeout(() => {
             fs.writeFileSync('db', JSON.stringify(this.data, null, 2));
