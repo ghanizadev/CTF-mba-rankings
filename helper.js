@@ -16,5 +16,13 @@ module.exports = {
     },
     validatePasswordFormat: function(password) {
         return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
-    }
+    },
+    basicInputFieldSanitizer: function (fieldValue){
+        return fieldValue
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
 }

@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const Database = require('./database');
 const auth = require('./auth');
 const RateLimiter = require('./rate-limiter');
-const { parseHeaderArray, parseCookies, validatePasswordFormat } = require('./helper');
+const { parseHeaderArray, parseCookies, validatePasswordFormat, basicInputFieldSanitizer } = require('./helper');
 
 function helloWorld(request, response) {
     response.writeHead(200, 'OK', ['Content-Type', 'application/json']);
@@ -65,7 +65,9 @@ function register(request, response) {
             return;
         }
 
-        const exists = Database.getInstance().getByUsername(username);
+        const sanitizedUsername = basicInputFieldSanitizer(username);
+
+        const exists = Database.getInstance().getByUsername(sanitizedUsername);
 
         if(exists) {
             response.writeHead(400, 'Bad Request', ['Content-Type', 'application/json']);
@@ -77,7 +79,7 @@ function register(request, response) {
 
         const user = {
             id,
-            username,
+            username: sanitizedUsername,
             password: auth.hash(password),
             flag
         }
