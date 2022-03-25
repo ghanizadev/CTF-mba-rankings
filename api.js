@@ -24,7 +24,7 @@ function authorize(request, response) {
         const user = Database.getInstance().getByUsername(username);
 
         if(user && auth.compare(password, user.password)) {
-            const cookie = `SID=${encodeURIComponent(auth.session(user))}; Max-Age=86400; Path=/;`;
+            const cookie = `__HOST_SID=${encodeURIComponent(auth.session(user))}; Max-Age=86400; Secure; HttpOnly; Path=/; SameSite=Strict`;
             response.writeHead(307, 'Temporary Redirect', ['Location', '/dashboard', 'Set-Cookie', cookie]);
             response.end();
             return;
@@ -36,7 +36,7 @@ function authorize(request, response) {
 }
 
 function logout(request, response) {
-    const cookie = `SID=${encodeURIComponent('popcorn')}; Max-Age=0; Path=/;`;
+    const cookie = `__HOST_SID=${encodeURIComponent('popcorn')}; Max-Age=0; Path=/; SameSite=Strict`;
     response.writeHead(307, 'Temporary Redirect', ['Location', '/', 'Set-Cookie', cookie]);
     response.end();
 }
@@ -86,7 +86,7 @@ function register(request, response) {
 
         Database.getInstance().insert(user);
 
-        const cookie = `SID=${encodeURIComponent(auth.session(user))}; Max-Age=86400; Path=/;`;
+        const cookie = `__HOST_SID=${encodeURIComponent(auth.session(user))}; Max-Age=86400; Secure; HttpOnly; Path=/; SameSite=Strict`;
         response.writeHead(307, 'Temporary Redirect', ['Location', '/dashboard', 'Set-Cookie', cookie]);
         response.end();
         return;
@@ -101,16 +101,16 @@ function getRequestInfo(request, response) {
         return;
     }
 
-    const {SID} = parseCookies(cookie);
-    if(!SID) {
+    const {__HOST_SID} = parseCookies(cookie);
+    if(!__HOST_SID) {
         response.writeHead(401, 'Unauthorized');
         response.end('C02');
         return;
     }
 
-    const userId = auth.validateSession(SID);
+    const userId = auth.validateSession(__HOST_SID);
     if(!userId) {
-        const cookie = `SID=${encodeURIComponent('popcorn')}; Max-Age=0; Path=/;`;
+        const cookie = `__HOST_SID=${encodeURIComponent('popcorn')}; Max-Age=0; Secure; HttpOnly; Path=/; SameSite=Strict`;
         response.writeHead(401, 'Unauthorized', ['Set-Cookie', cookie]);
         response.end('C03');
         return;
@@ -119,7 +119,7 @@ function getRequestInfo(request, response) {
     const user = Database.getInstance().getById(userId);
 
     if(!user) {
-        const cookie = `SID=${encodeURIComponent('popcorn')}; Max-Age=0; Path=/;`;
+        const cookie = `__HOST_SID=${encodeURIComponent('popcorn')}; Max-Age=0; Secure; HttpOnly; Path=/; SameSite=Strict`;
         response.writeHead(401, 'Unauthorized', ['Set-Cookie', cookie]);
         response.end('C04');
         return;
